@@ -1,0 +1,61 @@
+free c:channel.
+
+type key.
+type epoch.
+type counter.
+type sessionkey.
+
+free keyid:key [private].
+query attacker(sessionkey).
+
+fun sessionKeyGen(key, epoch):sessionkey.
+fun MAC(sessionkey, counter, bitstring): bitstring.
+
+let sender(ep:epoch, cnt:counter, keyid:key)=
+    new msg: bitstring; 
+    let sk = sessionKeyGen(keyid, ep) in
+    let mac=MAC(sk, cnt,msg) in
+    out(c,(cnt,msg));
+    out(c,(c,mac));
+    in(c,authfail:bool);
+    if authfail =false then
+       new ep:epoch;
+       new cnt:counter;
+       out(c,(cnt,ep));
+       let verifmac=MAC(keyid,cnt,ep);
+       out(c,(c,verifmac));
+       out(c,(cnt,msg));
+       out(c,(c,mac));
+(*
+	use keys to get sessionkey
+	new msg
+	send cid data
+	send cid, mac
+	if authfail 
+	   new ep, cnt
+	   	
+*)
+.
+let receiver(ep:epoch, cnt:counter, keyid:key)=
+    (*
+    use key to get session key 
+    receive cid+data
+    receive c+mac
+    if mac<>MAC(data)
+       out false
+       in cid, ep
+       in cid verifmac 
+       if <> mac then 0 else 
+       	  new sessionkey
+       	  in cid, data
+	  in cid, mac, 
+	  verify new mac 
+    *)
+.
+process
+	new ep:epoch;
+	new cnt:counter;
+	new keyid:key;
+
+.
+	
