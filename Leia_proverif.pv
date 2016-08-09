@@ -7,16 +7,73 @@ id = CAN ID
 k_id=128 bit symmetric key 
 e_id is the 56bit counter  - incremented at startup of car or when c_id overflows
 
-ke_id is (session) the 128bit key used for generating the mac. 
+ke_id is (session) the 128bit key used for generating the mac. (The output of the mac?)
 c_id is the 16 bit counter included in the mac  and publically in the dataframe  - unique for each subscriber
 
+(*Confusions: 
+	      
+0	      What is the security paramiter? Dodgy n
+
+1	      p7 suggests that each node on the network has its own identity and as such has its own unique symmetric key (k_id_i)
+	      p8 s is the set of all keys? 
+	      If so, the session key function takes in the unique key and outputs a unique session key (k^e_id_i)
+	      	 This then outputs MAC(k^e_id_i, c_id_i, data)
+		 PROBLEM: How can it authenticate it without knowing the value of the session key (if it is unique all the time????)
+		 	  Could make sense if it was sending along its identity but its not so surly it cant go through all possible keys and generate a new session for each node on the network      
+
+3	      p8 - Reset to zero cid-i <-- Is this only if it over flows or all the time, if so, why?
+	            
+
+
+
+What happens 
+
+[setup] is called at the start.	
+      Takes: unknown security param
+      
+
+      Sets epoch and counter to 0
+      for(kid in s){
+      	      sessionkeygen(kid);
+      }
+      Returns: (s[kid0..kidn-1], (epoch, counter)).
+
+[sessionKeyGen]
+      Takes: kid
+      
+      e++
+      MAC(kid,eid)
+      cid=0
+	 
+[AuthMsg]	
+      Takes: SessionKey(keid), cid, data
+      sends mac(keid, cid, data), counter and data
+      receiver updates counters and verifys mac
 *)
 type key.
 type counter.
 type epoch.
+type secret.
+type sessionKey. 
+free s:secret [private]
 
-fun sEnc(bitstring,key):bitstring.
+
+
+
+
+(*fun sEnc(bitstring,key):bitstring.
 reduc forall k:key, m:bitstring; sDec(sEnc(m,k),k)=m.
+*)
+fun sessionKeyGen(key,epoch): sessionKey.
+
+(*
+public tuple setup(nSecParam){
+       s = set of all keys generated from KG(kid_0..kid_n-1) ---------- This is somehow a shared secret.
+       ns=(0,0)
+}
+*)
+fun setup():(key,(epoch,counter)).
+
 
 let setup()
 
@@ -32,6 +89,8 @@ let reciever()
 .
 
 process
+	(* Doing setup here*)
+	
 	new k:key;
 	new c:counter;
 	new e:epoch;
