@@ -1,0 +1,41 @@
+free pc: channel.
+
+(*
+Each participant <id_i, K_id_i,  e_id_i, K^e_id_i; c_id_i>
+
+id = CAN ID
+k_id=128 bit symmetric key 
+e_id is the 56bit counter  - incremented at startup of car or when c_id overflows
+
+ke_id is (session) the 128bit key used for generating the mac. 
+c_id is the 16 bit counter included in the mac  and publically in the dataframe  - unique for each subscriber
+
+*)
+type key.
+type counter.
+type epoch.
+
+fun sEnc(bitstring,key):bitstring.
+reduc forall k:key, m:bitstring; sDec(sEnc(m,k),k)=m.
+
+let setup()
+
+
+.
+
+let sender()
+
+
+.
+let reciever()
+
+.
+
+process
+	new k:key;
+	new c:counter;
+	new e:epoch;
+	(*out(pc,c);
+	out(pc,e);*)
+
+.
