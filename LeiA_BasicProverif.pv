@@ -18,7 +18,7 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
     out(c,(cnt,msg));
     out(c,(c,mac));
     in(c,authfail:bool);
-    if authfail =false then
+    if authfail = true then
        new ep:epoch;
        new cnt:counter;
        out(c,(cnt,ep));
@@ -37,6 +37,24 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
 *)
 .
 let receiver(ep:epoch, cnt:counter, keyid:key)=
+    let sk=sessionKeyGen(keyid,ep);
+    in(c,(cnt,msg:bitstring));
+    in(c,(xcnt:counter, mac:bitstring));
+    let maccheck=MAC(sk,cnt,msg) in
+    if maccheck<>mac then
+    out(c,true);
+    in(c,(xcnt,ep));
+    in (c,(xcnt,verifmac:bitstring));
+    maccheck=MAC(keyid,xcnt,ep);
+    if maccheck=verifmac then
+       sk=sessionKeyGen(keyid,ep);
+       in(c,(cnt,msg:bitstring));
+       in(c,(xcnt:counter, mac:bitstring));
+       let maccheck=MAC(sk,cnt,msg) in
+       if maccheck<>mac then
+       0
+    
+    
     (*
     use key to get session key 
     receive cid+data
@@ -56,6 +74,7 @@ process
 	new ep:epoch;
 	new cnt:counter;
 	new keyid:key;
+	
 
 .
 	
