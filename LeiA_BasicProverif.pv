@@ -74,7 +74,9 @@ process
 	new ep:epoch;
 	new cnt:counter;
 	new keyid:key;
-	
+	(
+		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
+	}
 
 .
 	
