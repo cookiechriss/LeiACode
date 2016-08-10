@@ -6,10 +6,13 @@ type counter.
 type sessionkey.
 
 free keyid:key [private].
-query attacker(sessionkey).
+
+query attacker(keyid).
 
 fun sessionKeyGen(key, epoch):sessionkey.
 fun MAC(sessionkey, counter, bitstring): bitstring.
+fun epoch2bitstring(epoch):bitstring [data,typeConverter].
+
 
 let sender(ep:epoch, cnt:counter, keyid:key)=
     new msg: bitstring; 
@@ -22,10 +25,11 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
        new ep:epoch;
        new cnt:counter;
        out(c,(cnt,ep));
-       let verifmac=MAC(keyid,cnt,ep);
+       
+       let verifmac=MAC(sk,cnt,epoch2bitstring(ep)) in
        out(c,(c,verifmac));
        out(c,(cnt,msg));
-       out(c,(c,mac));
+       out(c,(c,mac))
 (*
 	use keys to get sessionkey
 	new msg
@@ -37,18 +41,18 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
 *)
 .
 let receiver(ep:epoch, cnt:counter, keyid:key)=
-    let sk=sessionKeyGen(keyid,ep);
-    in(c,(cnt,msg:bitstring));
+    let sk=sessionKeyGen(keyid,ep) in 
+    in(c,(cnt:counter,msg:bitstring));
     in(c,(xcnt:counter, mac:bitstring));
     let maccheck=MAC(sk,cnt,msg) in
     if maccheck<>mac then
     out(c,true);
-    in(c,(xcnt,ep));
-    in (c,(xcnt,verifmac:bitstring));
-    maccheck=MAC(keyid,xcnt,ep);
+    in(c,(=xcnt,=ep));
+    in (c,(=xcnt,verifmac:bitstring));
+    let maccheck=MAC(sk,xcnt,epoch2bitstring(ep)) in 
     if maccheck=verifmac then
-       sk=sessionKeyGen(keyid,ep);
-       in(c,(cnt,msg:bitstring));
+       let sk=sessionKeyGen(keyid,ep) in 
+       in(c,(=cnt,msg:bitstring));
        in(c,(xcnt:counter, mac:bitstring));
        let maccheck=MAC(sk,cnt,msg) in
        if maccheck<>mac then
@@ -76,7 +80,5 @@ process
 	new keyid:key;
 	(
 		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
-	}
-
-.
+	)
 	
