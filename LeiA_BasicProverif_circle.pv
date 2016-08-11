@@ -13,28 +13,12 @@ fun sessionKeyGen(key, epoch):sessionkey.
 fun MAC(sessionkey, counter, bitstring): bitstring.
 fun epoch2bitstring(epoch):bitstring [data,typeConverter].
 
-
-(* Events
-   sent and not authfail 
-   recevied andmac check
-
-   resent
-   resyncSuc
-
-   not authfail2
-   maccheck2
-
-*)
-
 event authSuccess(sessionkey,bitstring).
 event macChecked(sessionkey,bitstring).
-event messageSent(sessionkey,bitstring).
-event macVerified(sessionkey,bitstring).
 
 
 
 query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
-query sk:sessionkey, mac:bitstring; event(messageSent(sk,mac))==>event(macVerified(sk,mac)).
 
 
 let sender(ep:epoch, cnt:counter, keyid:key)=
@@ -58,14 +42,10 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
        (*Send new mac to verify*)
        let verifmac=MAC(newsk,newcnt,epoch2bitstring(newep)) in
        out(c,(newcnt,verifmac));
-       (*Resend counters then data*)
-       let newmac=MAC(newsk,newcnt,msg) in 
-       out(c,(cnt,msg));
-       out(c,(cnt,newmac));
-       event messageSent(newsk,newmac);
+       (*Process can be restarted*)
        0
     else
-	event authSuccess(sk,mac);
+	event authSuccess(sk,mac);  
 	0
 .
 let receiver(ep:epoch, ocnt:counter, keyid:key)=
@@ -75,27 +55,19 @@ let receiver(ep:epoch, ocnt:counter, keyid:key)=
     in(c,(=cnt, mac:bitstring));
     let maccheck=MAC(sk,cnt,msg) in
     if maccheck=mac then
-       event macChecked(sk,maccheck)
+       event macChecked(sk,maccheck);
+       0
     else
     (*Macs did not match, counters must be out of sync. Auth_Fail*)
     out(c,true);
-    
     in(c,(newcnt:counter,newep:epoch));
     in (c,(=newcnt,verifmac:bitstring));
     let newsk=sessionKeyGen(keyid,newep) in
     (*Check macs*)
     let maccheck2=MAC(sk,newcnt,epoch2bitstring(newep)) in
-    (* If macs match up then carry on, if not, somethings wrong with the keys?*)
+    (* counters resynced, process can restart*)
     if maccheck2=verifmac then
-       
-      
-       in(c,(=newcnt,newmsg:bitstring));
-       in(c,(=newcnt, newmac:bitstring));
-       let maccheck3=MAC(newsk,newcnt,newmsg) in
-       if maccheck3=newmac then
-       	  event macVerified(newsk,maccheck3)
-       else
-       0
+        0
 .
 process
 	new ep:epoch;
