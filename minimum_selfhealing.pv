@@ -1,0 +1,50 @@
+free n1 : bitstring [private].
+free n2 : bitstring [private].
+free success: bitstring [private].
+
+free commChannel : channel [private] .
+
+free token : bitstring [private] .
+
+free c : channel.
+
+event data_sent1(bitstring).
+event data_received1(bitstring).
+event data_sent2(bitstring).
+event data_received2(bitstring).
+
+cell s := c.
+
+query n:bitstring;
+      event (data_received1(n)) ==> event (data_sent1(n)). (* false *)
+query n:bitstring;
+      event (data_received2(n)) ==> event (data_sent2(n)). (* true *)
+query attacker(n1). (* true *)
+query attacker(n2). (* false *)
+
+
+let A() =
+    new c2: channel;
+    (* first iteration *)
+    event data_sent1(n2);
+    read s as c1;
+    out(c1, n1);
+    (* second iteration *)
+    s := c2;
+    out (commChannel, token);
+    event data_sent2(n2);
+    out(c2, n2).
+
+let B() =
+    (* first iteration *)
+    read s as c1;
+    in(c1, x:bitstring);
+    event data_received1(x);
+    (* second iteration *)
+    in (commChannel, tk:bitstring);
+    if tk = token then
+    read s as c2;
+    in(c2, y:bitstring);
+    event data_received2(y).
+    
+process A | B
