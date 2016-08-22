@@ -1,0 +1,17 @@
+free c:channel.
+
+free zero:bitstring.
+free one:bitstring.
+
+
+
+free key:bitstring [private].
+
+query attacker(key).
+
+let a() =
+    out(c,key)
+
+.
+
+process a

@@ -20,33 +20,71 @@ event macChecked(sessionkey,bitstring).
 
 query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
 
+(*StatVerif stuff*)
+free zero:bitstring.
+free one:bitstring.
+free two:bitstring.
+free three:bitstring.
+
+cell senderC:= zero.
+cell receiverC:=zero.
+
+(*Session key gen 
+	  eid++
+	  gen mac 
+	  reset counter to 0
+update counters
+       if cid=4
+       	  if eid=4
+	     eid=0
+	  else
+	     eid++
+	   cid=0
+	   call keygen
+        else 
+	    cid++
+*)
+
+
+
+(*Code for repeated functions 
+       session_key_gen
+-----------------------------------
+
+       
+*)
 
 let sender(ep:epoch, cnt:counter, keyid:key)=
-    new msg: bitstring;
-    (*Seup sessionkey*)
-    let sk = sessionKeyGen(keyid, ep) in
-    let mac=MAC(sk, cnt,msg) in
-    (*Send counter/ msg and then mac*)
-    out(c,(cnt,msg));
-    out(c,(cnt,mac));
-    in(c,authfail:bool);
-    if authfail = true then
-       (*
-       update counters()
-       *)
-       new newep:epoch;
-       new newcnt:counter;
-       let newsk = sessionKeyGen(keyid,newep) in
-       (*Broadcast Counters to resync them*)
-       out(c,(newcnt,newep));
-       (*Send new mac to verify*)
-       let verifmac=MAC(newsk,newcnt,epoch2bitstring(newep)) in
-       out(c,(newcnt,verifmac));
-       (*Process can be restarted*)
-       0
+    senderC:=zero;
+    read senderC as counter;
+    if counter=zero then
+       out(c,keyid)
     else
-	event authSuccess(sk,mac);  
-	0
+    
+        new msg: bitstring;
+    	(*Seup sessionkey*)
+    	let sk = sessionKeyGen(keyid, ep) in
+   	let mac=MAC(sk, cnt,msg) in
+    	(*Send counter/ msg and then mac*)
+    	out(c,(cnt,msg));
+	     out(c,(cnt,mac));
+    	     in(c,authfail:bool);
+    	     if authfail = true then
+       	     (*
+       	     update counters()
+       	     *)
+       	     new newep:epoch;
+       	     new newcnt:counter;
+       	     let newsk = sessionKeyGen(keyid,newep) in
+       	     (*Broadcast Counters to resync them*)
+       	     out(c,(newcnt,newep));
+       	     (*Send new mac to verify*)
+       	     let verifmac=MAC(newsk,newcnt,epoch2bitstring(newep)) in
+       	     out(c,(newcnt,verifmac))
+       	     (*Process can be restarted*)
+	         else
+		 	event authSuccess(sk,mac)
+		
 .
 let receiver(ep:epoch, ocnt:counter, keyid:key)=
     let sk=sessionKeyGen(keyid,ep) in
