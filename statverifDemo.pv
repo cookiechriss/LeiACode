@@ -1,3 +1,5 @@
+(*
+Broken code 1
 free c:channel.
 
 free zero:bitstring.
@@ -15,3 +17,35 @@ let a() =
 .
 
 process a
+
+*)
+(* If i do this then i get 
+Internal error: Unexpected hypothesis
+Please report bug to j.phillips@cs.bham.ac.uk, including input file and output
+
+    s:=zero;
+*)
+(* Broken Code 2
+free c:channel.
+
+free zero:bitstring.
+free one:bitstring.
+
+free key:bitstring [private].
+
+cell s:=zero.
+
+query attacker(key).
+
+let a() =
+
+    new counter:bitstring;
+    read s as counter;
+    if counter=zero then
+        out(c,key)
+    else
+	0
+.
+
+process a
+*)
