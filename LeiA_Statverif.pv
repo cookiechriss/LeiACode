@@ -49,6 +49,13 @@ letfun plusplus(x:bitstring)=
        if x=zero then one
        else if x=one then two
        else if x=three then zero.
+
+(*out (eidpp,SK)*)
+letfun session_key_gen(eid:bitstring)=
+    let eidpp:bitstring = plusplus(eid) in
+    let sk = sessionKeyGenBS(keyid, eidpp) in
+    (eidpp,sk)
+.
        
 (*letfun session_key_gen(e:bitstring*)
 (*Code for repeated functions 
@@ -92,23 +99,22 @@ letfun plusplus(x:bitstring)=
 let sender(ep:epoch, cnt:counter, keyid:key)=
 (*session_key_gen()*)
     lock senderE;
-    read senderE as eid:bitstring;
-    let eidpp:bitstring = plusplus(eid) in
+    lock senderC;
+    read senderE as eid; 
+    let (eidpp:bitstring, sk:sessionkey) = session_key_gen(eid) in
     senderE:=eidpp;
-    let sk = sessionKeyGenBS(keyid, eidpp) in
-    senderC:=zero;
-    
+    senderC:=zero;  
     (*Update_counters()*)
     read senderC as cid:bitstring;
     if cid=three then (  
        if eid = three then
        	  senderE :=zero
-       else
-          let eidpp2:bitstring = plusplus(eidpp) in
-	  senderE:=eidpp2;
-	  senderC:=zero
-	  (*sessionkeygen*)
-	  )
+       else let eidpp2:bitstring = plusplus(eidpp) in senderE:=eidpp2;
+       senderC:=zero;
+       let (eidpp2:bitstring, sk:sessionkey) = session_key_gen(eidpp) in
+       senderE:=eidpp2;
+       senderC:=zero
+    )
     else 
 	let cidpp = plusplus(cid) in
 	    senderC:=cidpp;
