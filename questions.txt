@@ -1,0 +1,4 @@
+if i do read s as eid where s points to one 
+if i change the value of s, does eid also update? if not, whats the pest way of redefining it without warnings as I cant check it directly?
+
+is there a better way of loads of repeated code
