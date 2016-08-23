@@ -10,6 +10,7 @@ free keyid:key [private].
 query attacker(keyid).
 
 fun sessionKeyGen(key, epoch):sessionkey.
+fun sessionKeyGenBS(key, bitstring):sessionkey.
 fun MAC(sessionkey, counter, bitstring): bitstring.
 fun epoch2bitstring(epoch):bitstring [data,typeConverter].
 
@@ -26,9 +27,8 @@ free one:bitstring.
 free two:bitstring.
 free three:bitstring.
 
-cell senderC:= zero.
-cell receiverC:=zero.
-
+cell senderC:bitstring:= zero.
+cell senderE:bitstring:=zero.
 (*Session key gen 
 	  eid++
 	  gen mac 
@@ -51,19 +51,49 @@ update counters
        session_key_gen
 -----------------------------------
 
+
+
        
 *)
 
 let sender(ep:epoch, cnt:counter, keyid:key)=
+(*Session Key Gen*)
+    lock senderE;
+    read senderE as eid:bitstring;
+    (*Increase eid*)
+    if eid=zero then
+       senderE:=one
+    else if eid=one then
+       senderE:=two
+    else if eid=two then
+       senderE:=three
+    else senderE:=zero;
+    read senderE as eid:bitstring;
+    (*Create session key*)
+    let sk = sessionKeyGenBS(keyid, eid) in
     senderC:=zero;
-    read senderC as counter;
-    if counter=zero then
-       out(c,keyid)
-    else
+    (*Update counters*)
+
+    read senderC as cid:bitstring;
+    if cid=three then ( 
+       if eid = three then
+       	  senderE :=zero
+       else 
+	 if eid=zero then
+       	    senderE:=one
+   	 else if eid=one then
+       	    senderE:=two
+    	 else senderE:=three; 
+       senderC:=zero) 
+    else (
+	if cid=zero then
+       	    senderC:=one
+   	 else if cid=one then
+       	    senderC:=two
+    	 else senderC:=three;
+    )
+    new msg:bitstring;
     
-        new msg: bitstring;
-    	(*Seup sessionkey*)
-    	let sk = sessionKeyGen(keyid, ep) in
    	let mac=MAC(sk, cnt,msg) in
     	(*Send counter/ msg and then mac*)
     	out(c,(cnt,msg));
