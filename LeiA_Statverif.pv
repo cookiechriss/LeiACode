@@ -1,3 +1,4 @@
+set debugOutput=false.
 free c:channel.
 
 type key.
@@ -70,8 +71,13 @@ letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
 	)
     	else let cidpp = plusplus(cid) in (cidpp,eid,sk)
 .
-
-let sender(ep:bitstring, cnt:bitstring, keyid:key)=
+letfun isGreatherThan(x:bitstring, y:bitstring)=
+       if x = zero then y
+       else if x=one  && (y=two || y=three) then y
+       else if x=two && y=three then y
+       else x      	  
+.
+let sender(keyid:key)=
 (*session_key_gen()*)
     lock senderE;
     lock senderC;
@@ -105,7 +111,7 @@ let sender(ep:bitstring, cnt:bitstring, keyid:key)=
        	event authSuccess(sk,mac)
 		
 .
-let receiver(ep:bitstring, ocnt:bitstring, keyid:key)=
+let receiver(keyid:key)=
     lock receiverE;
     lock receiverC;
     read receiverE as eid; 
@@ -116,6 +122,7 @@ let receiver(ep:bitstring, ocnt:bitstring, keyid:key)=
     let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
     receiverC:=cid1;
     receiverE:=eid1;
+    
     
     (*Receive counter and msg*)
 
@@ -130,20 +137,22 @@ let receiver(ep:bitstring, ocnt:bitstring, keyid:key)=
     (*Macs did not match, counters must be out of sync. Auth_Fail*)
     out(c,true);
     in(c,(scid1:bitstring,seid:bitstring));
-    in (c,(=scid,verifmac:bitstring));
-
-    let newsk=sessionKeyGen(keyid,seid) in
+    let cid2=isGreatherThan(cid1,scid1) in
+    let eid2=isGreatherThan(eid1,scid1) in
+    
+    in (c,(=cid2,verifmac:bitstring));
+    
+    let newsk=sessionKeyGen(keyid,cid2) in
     (*Check macs*)
-    let maccheck2=MAC(sk,scid,seid) in
+    let maccheck2=MAC(sk,cid2,eid2) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
+       out(c,keyid);
         0
 .
 process
-	new ep:bitstring;
-	new cnt:bitstring;
 	(
-		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
+		(!sender(keyid)) | (!receiver(keyid))
 	)
 
 
