@@ -122,7 +122,8 @@ let receiver(keyid:key)=
     let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
     receiverC:=cid1;
     receiverE:=eid1;
-    (*out(c,keyid);*)
+    (* error_outOfMemory.txt
+    out(c,keyid); *)
     
     (*Receive counter and msg*)
 
@@ -147,18 +148,12 @@ let receiver(keyid:key)=
     let maccheck2=MAC(sk,cid2,eid2) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
-       
+       (* runs for 10+ mins and generates a segmentation fault
+
+       out(c,keyid);*)
         0
 .
 process
 	(
 		(!sender(keyid)) | (!receiver(keyid))
 	)
-
-
-
-
-
-(*To do: add code to update counters if they are less than the ones received
-     	 update variables to new ones ifthey have changed 
-	 change the process to init the sender and receiver counters*)
