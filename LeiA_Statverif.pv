@@ -9,9 +9,9 @@ free keyid:key [private].
 
 query attacker(keyid).
 
-fun sessionKeyGen(key, epoch):sessionkey.
+fun sessionKeyGen(key, bitstring):sessionkey.
 fun sessionKeyGenBS(key, bitstring):sessionkey.
-fun MAC(sessionkey, counter, bitstring): bitstring.
+fun MAC(sessionkey, bitstring, bitstring): bitstring.
 fun epoch2bitstring(epoch):bitstring [data,typeConverter].
 
 event authSuccess(sessionkey,bitstring).
@@ -48,15 +48,25 @@ update counters
 letfun plusplus(x:bitstring)=
        if x=zero then one
        else if x=one then two
-       else if x=three then zero.
-
-(*out (eidpp,SK)*)
-letfun session_key_gen(eid:bitstring)=
-    let eidpp:bitstring = plusplus(eid) in
-    let sk = sessionKeyGenBS(keyid, eidpp) in
-    (eidpp,sk)
+       else if x=three then zero
 .
-       
+
+letfun session_key_gen(eid:bitstring)=
+       let eidpp:bitstring = plusplus(eid) in
+       let sk = sessionKeyGenBS(keyid, eidpp) in
+       (eidpp,sk)
+.
+letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
+       if cid=three then (
+       	  (*plusplus handles the overflow
+       	  if eid = three then
+       	     newE=zero 
+       	  else  let eidpp:bitstring = plusplus(eid) in senderE:=eidpp2;*)
+       	  let (eidpp:bitstring, newsk:sessionkey) = session_key_gen(eid) in
+	  (zero,eidpp, newsk)
+	)
+    	else let cidpp = plusplus(cid) in (cidpp,eid,sk)
+.
 (*letfun session_key_gen(e:bitstring*)
 (*Code for repeated functions 
        session_key_gen
@@ -96,7 +106,7 @@ letfun session_key_gen(eid:bitstring)=
     	 else senderC:=three;    
 *)
 
-let sender(ep:epoch, cnt:counter, keyid:key)=
+let sender(ep:bitstring, cnt:bitstring, keyid:key)=
 (*session_key_gen()*)
     lock senderE;
     lock senderC;
@@ -105,6 +115,11 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
     senderE:=eidpp;
     senderC:=zero;  
     (*Update_counters()*)
+    let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
+    senderC:=cid1;
+    senderE:=eid1;
+    
+(*
     read senderC as cid:bitstring;
     if cid=three then (  
        if eid = three then
@@ -115,38 +130,33 @@ let sender(ep:epoch, cnt:counter, keyid:key)=
        senderE:=eidpp2;
        senderC:=zero
     )
-    else 
-	let cidpp = plusplus(cid) in
-	    senderC:=cidpp;
-   
+    else let cidpp = plusplus(cid) in senderC:=cidpp;
+Endif*)
     new msg:bitstring;
-    
-   	let mac=MAC(sk, cnt,msg) in
-    	(*Send counter/ msg and then mac*)
-    	out(c,(cnt,msg));
-	     out(c,(cnt,mac));
-    	     in(c,authfail:bool);
-    	     if authfail = true then
-       	     (*
-       	     update counters()
-       	     *)
-       	     new newep:epoch;
-       	     new newcnt:counter;
-       	     let newsk = sessionKeyGen(keyid,newep) in
-       	     (*Broadcast Counters to resync them*)
-       	     out(c,(newcnt,newep));
-       	     (*Send new mac to verify*)
-       	     let verifmac=MAC(newsk,newcnt,epoch2bitstring(newep)) in
-       	     out(c,(newcnt,verifmac))
-       	     (*Process can be restarted*)
-	         else
-		 	event authSuccess(sk,mac)
+    let mac=MAC(newsk,cid1,msg) in
+    (*Send counter/ msg and then mac*)
+    out(c,(cid1,msg));
+    out(c,(cid1,mac));
+    in(c,authfail:bool);
+    if authfail = true then
+       (*update counters()*)
+       let (cid2:bitstring,eid2:bitstring,newsk2:sessionkey) = update_counters(cid1,eid1, newsk) in
+       senderC:=cid2;
+       senderE:=eid2;
+       (*Broadcast Counters to resync them*)
+       out(c,(cid2,eid2));
+       (*Send new mac to verify*)
+       let verifmac=MAC(newsk2,cid2,eid2) in
+       out(c,(cid2,verifmac))
+       (*Process can be restarted*)
+    else
+       	event authSuccess(sk,mac)
 		
 .
-let receiver(ep:epoch, ocnt:counter, keyid:key)=
+let receiver(ep:bitstring, ocnt:bitstring, keyid:key)=
     let sk=sessionKeyGen(keyid,ep) in
     (*Receive counter and msg*)
-    in(c,(cnt:counter,msg:bitstring));
+    in(c,(cnt:bitstring,msg:bitstring));
     in(c,(=cnt, mac:bitstring));
     let maccheck=MAC(sk,cnt,msg) in
     if maccheck=mac then
@@ -155,18 +165,18 @@ let receiver(ep:epoch, ocnt:counter, keyid:key)=
     else
     (*Macs did not match, counters must be out of sync. Auth_Fail*)
     out(c,true);
-    in(c,(newcnt:counter,newep:epoch));
+    in(c,(newcnt:bitstring,newep:bitstring));
     in (c,(=newcnt,verifmac:bitstring));
     let newsk=sessionKeyGen(keyid,newep) in
     (*Check macs*)
-    let maccheck2=MAC(sk,newcnt,epoch2bitstring(newep)) in
+    let maccheck2=MAC(sk,newcnt,newep) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
         0
 .
 process
-	new ep:epoch;
-	new cnt:counter;
+	new ep:bitstring;
+	new cnt:bitstring;
 	(
 		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
 	)
