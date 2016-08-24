@@ -122,7 +122,7 @@ let receiver(keyid:key)=
     let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
     receiverC:=cid1;
     receiverE:=eid1;
-    
+    (*out(c,keyid);*)
     
     (*Receive counter and msg*)
 
@@ -147,7 +147,7 @@ let receiver(keyid:key)=
     let maccheck2=MAC(sk,cid2,eid2) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
-       out(c,keyid);
+       
         0
 .
 process
