@@ -67,44 +67,6 @@ letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
 	)
     	else let cidpp = plusplus(cid) in (cidpp,eid,sk)
 .
-(*letfun session_key_gen(e:bitstring*)
-(*Code for repeated functions 
-       session_key_gen
------------------------------------
-    lock senderE;
-    read senderE as eid:bitstring;
-    if eid=zero then
-       senderE:=one
-    else if eid=one then
-       senderE:=two
-    else if eid=two then
-       senderE:=three
-    else senderE:=zero;
-    read senderE as eid:bitstring;
-    let sk = sessionKeyGenBS(keyid, eid) in
-    senderC:=zero;
-
-
-    update_counters()   
------------------------------------
-    read senderC as cid:bitstring;
-    if cid=three then (  
-       if eid = three then
-       	  senderE :=zero
-       else 
-	 if eid=zero then
-       	    senderE:=one
-   	 else if eid=one then
-       	    senderE:=two
-    	 else senderE:=three; 
-       senderC:=zero) 
-    else 
-	if cid=zero then
-       	    senderC:=one
-   	 else if cid=one then
-       	    senderC:=two
-    	 else senderC:=three;    
-*)
 
 let sender(ep:bitstring, cnt:bitstring, keyid:key)=
 (*session_key_gen()*)
@@ -118,20 +80,7 @@ let sender(ep:bitstring, cnt:bitstring, keyid:key)=
     let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
     senderC:=cid1;
     senderE:=eid1;
-    
-(*
-    read senderC as cid:bitstring;
-    if cid=three then (  
-       if eid = three then
-       	  senderE :=zero
-       else let eidpp2:bitstring = plusplus(eidpp) in senderE:=eidpp2;
-       senderC:=zero;
-       let (eidpp2:bitstring, sk:sessionkey) = session_key_gen(eidpp) in
-       senderE:=eidpp2;
-       senderC:=zero
-    )
-    else let cidpp = plusplus(cid) in senderC:=cidpp;
-Endif*)
+
     new msg:bitstring;
     let mac=MAC(newsk,cid1,msg) in
     (*Send counter/ msg and then mac*)
