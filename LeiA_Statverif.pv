@@ -29,6 +29,9 @@ free three:bitstring.
 
 cell senderC:bitstring:= zero.
 cell senderE:bitstring:=zero.
+
+cell receiverC:bitstring:= zero.
+cell receiverE:bitstring:=zero.
 (*Session key gen 
 	  eid++
 	  gen mac 
@@ -103,22 +106,35 @@ let sender(ep:bitstring, cnt:bitstring, keyid:key)=
 		
 .
 let receiver(ep:bitstring, ocnt:bitstring, keyid:key)=
-    let sk=sessionKeyGen(keyid,ep) in
+    lock receiverE;
+    lock receiverC;
+    read receiverE as eid; 
+    let (eidpp:bitstring, sk:sessionkey) = session_key_gen(eid) in
+    receiverE:=eidpp;
+    receiverC:=zero;  
+    (*Update_counters()*)
+    let (cid1:bitstring,eid1:bitstring,newsk:sessionkey) = update_counters(zero,eidpp, sk) in
+    receiverC:=cid1;
+    receiverE:=eid1;
+    
     (*Receive counter and msg*)
-    in(c,(cnt:bitstring,msg:bitstring));
-    in(c,(=cnt, mac:bitstring));
-    let maccheck=MAC(sk,cnt,msg) in
+
+(*add some code which only updades cid and eid if senders is larger*)
+    in(c,(scid:bitstring,msg:bitstring));
+    in(c,(=scid, mac:bitstring));
+    let maccheck=MAC(newsk,cid1,msg) in
     if maccheck=mac then
-       event macChecked(sk,maccheck);
+       event macChecked(newsk,maccheck);
        0
     else
     (*Macs did not match, counters must be out of sync. Auth_Fail*)
     out(c,true);
-    in(c,(newcnt:bitstring,newep:bitstring));
-    in (c,(=newcnt,verifmac:bitstring));
-    let newsk=sessionKeyGen(keyid,newep) in
+    in(c,(scid1:bitstring,seid:bitstring));
+    in (c,(=scid,verifmac:bitstring));
+
+    let newsk=sessionKeyGen(keyid,seid) in
     (*Check macs*)
-    let maccheck2=MAC(sk,newcnt,newep) in
+    let maccheck2=MAC(sk,scid,seid) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
         0
@@ -129,4 +145,11 @@ process
 	(
 		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
 	)
-	
+
+
+
+
+
+(*To do: add code to update counters if they are less than the ones received
+     	 update variables to new ones ifthey have changed 
+	 change the process to init the sender and receiver counters*)
