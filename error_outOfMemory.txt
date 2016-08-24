@@ -1,0 +1,97 @@
+File "LeiA_Statverif.pv", line 145, character 9 - line 145, character 14:
+Warning: identifier newsk rebound
+Process:
+(
+    {1}!
+    {2}lock senderE;
+    {3}lock senderC;
+    {4}read senderE as eid: bitstring;
+    {5}let v_56: bitstring = catch-fail((if (eid = zero) then one else (if (eid = one) then two else (if (eid = three) then zero else fail-any)))) in
+    {6}let v_57: sessionkey = catch-fail(sessionKeyGenBS(keyid,v_56)) in
+    {7}let (eidpp: bitstring,sk: sessionkey) = (if not-caught-fail(v_56) then (if not-caught-fail(v_57) then (v_56,v_57) else fail-any) else fail-any) in
+    {8}senderE := eidpp;
+    {9}senderC := zero;
+    {10}let v_58: bitstring = catch-fail((if (eidpp = zero) then one else (if (eidpp = one) then two else (if (eidpp = three) then zero else fail-any)))) in
+    {11}let v_59: sessionkey = catch-fail(sessionKeyGenBS(keyid,v_58)) in
+    {12}let v_60: bitstring = catch-fail((if not-caught-fail(v_58) then (if not-caught-fail(v_59) then (v_58,v_59) else fail-any) else fail-any)) in
+    {13}let v_61: bitstring = catch-fail((if (zero = zero) then one else (if (zero = one) then two else (if (zero = three) then zero else fail-any)))) in
+    {14}let (cid1: bitstring,eid1: bitstring,newsk: sessionkey) = (if (zero = three) then (if (not-caught-fail(v_60) && success?(is-true(success?(1-proj-2-tuple(v_60))))) then (zero,1-proj-2-tuple(v_60),2-proj-2-tuple(v_60)) else fail-any) else (if not-caught-fail(v_61) then (v_61,eidpp,sk) else fail-any)) in
+    {15}senderC := cid1;
+    {16}senderE := eid1;
+    {17}new msg: bitstring;
+    {18}let mac: bitstring = MAC(newsk,cid1,msg) in
+    {19}out(c, (cid1,msg));
+    {20}out(c, (cid1,mac));
+    {21}in(c, authfail: bool);
+    {22}if (authfail = true) then
+    {23}let v_62: bitstring = catch-fail((if (eid1 = zero) then one else (if (eid1 = one) then two else (if (eid1 = three) then zero else fail-any)))) in
+    {24}let v_63: sessionkey = catch-fail(sessionKeyGenBS(keyid,v_62)) in
+    {25}let v_64: bitstring = catch-fail((if not-caught-fail(v_62) then (if not-caught-fail(v_63) then (v_62,v_63) else fail-any) else fail-any)) in
+    {26}let v_65: bitstring = catch-fail((if (cid1 = zero) then one else (if (cid1 = one) then two else (if (cid1 = three) then zero else fail-any)))) in
+    {27}let (cid2: bitstring,eid2: bitstring,newsk2: sessionkey) = (if (cid1 = three) then (if (not-caught-fail(v_64) && success?(is-true(success?(1-proj-2-tuple(v_64))))) then (zero,1-proj-2-tuple(v_64),2-proj-2-tuple(v_64)) else fail-any) else (if not-caught-fail(v_65) then (v_65,eid1,newsk) else fail-any)) in
+    {28}senderC := cid2;
+    {29}senderE := eid2;
+    {30}out(c, (cid2,eid2));
+    {31}let verifmac: bitstring = MAC(newsk2,cid2,eid2) in
+        {32}out(c, (cid2,verifmac))
+    else
+        {33}event authSuccess(sk,mac)
+) | (
+    {34}!
+    {35}lock receiverE;
+    {36}lock receiverC;
+    {37}read receiverE as eid_66: bitstring;
+    {38}let v_67: bitstring = catch-fail((if (eid_66 = zero) then one else (if (eid_66 = one) then two else (if (eid_66 = three) then zero else fail-any)))) in
+    {39}let v_68: sessionkey = catch-fail(sessionKeyGenBS(keyid,v_67)) in
+    {40}let (eidpp_69: bitstring,sk_70: sessionkey) = (if not-caught-fail(v_67) then (if not-caught-fail(v_68) then (v_67,v_68) else fail-any) else fail-any) in
+    {41}receiverE := eidpp_69;
+    {42}receiverC := zero;
+    {43}let v_71: bitstring = catch-fail((if (eidpp_69 = zero) then one else (if (eidpp_69 = one) then two else (if (eidpp_69 = three) then zero else fail-any)))) in
+    {44}let v_72: sessionkey = catch-fail(sessionKeyGenBS(keyid,v_71)) in
+    {45}let v_73: bitstring = catch-fail((if not-caught-fail(v_71) then (if not-caught-fail(v_72) then (v_71,v_72) else fail-any) else fail-any)) in
+    {46}let v_74: bitstring = catch-fail((if (zero = zero) then one else (if (zero = one) then two else (if (zero = three) then zero else fail-any)))) in
+    {47}let (cid1_75: bitstring,eid1_76: bitstring,newsk_77: sessionkey) = (if (zero = three) then (if (not-caught-fail(v_73) && success?(is-true(success?(1-proj-2-tuple(v_73))))) then (zero,1-proj-2-tuple(v_73),2-proj-2-tuple(v_73)) else fail-any) else (if not-caught-fail(v_74) then (v_74,eidpp_69,sk_70) else fail-any)) in
+    {48}receiverC := cid1_75;
+    {49}receiverE := eid1_76;
+    {50}out(c, keyid);
+    {51}in(c, (scid: bitstring,msg_78: bitstring));
+    {52}in(c, (=scid,mac_79: bitstring));
+    {53}let maccheck: bitstring = MAC(newsk_77,cid1_75,msg_78) in
+    {54}if (maccheck = mac_79) then
+        {55}event macChecked(newsk_77,maccheck)
+    else
+        {56}out(c, true);
+        {57}in(c, (scid1: bitstring,seid: bitstring));
+        {58}let cid2_80: bitstring = (if (cid1_75 = zero) then scid1 else (if ((cid1_75 = one) && ((scid1 = two) || (scid1 = three))) then scid1 else (if ((cid1_75 = two) && (scid1 = three)) then scid1 else cid1_75))) in
+        {59}let eid2_81: bitstring = (if (eid1_76 = zero) then scid1 else (if ((eid1_76 = one) && ((scid1 = two) || (scid1 = three))) then scid1 else (if ((eid1_76 = two) && (scid1 = three)) then scid1 else eid1_76))) in
+        {60}in(c, (=cid2_80,verifmac_82: bitstring));
+        {61}let newsk_83: sessionkey = sessionKeyGen(keyid,cid2_80) in
+        {62}let maccheck2: bitstring = MAC(sk_70,cid2_80,eid2_81) in
+        {63}if (maccheck2 = verifmac_82) then
+        0
+)
+
+-- Query event(authSuccess(sk_84,mac_85)) ==> event(macChecked(sk_84,mac_85))
+nounif attacker(cells(*senderC_118,*senderE_119,*receiverC_120,*receiverE_121),v_122)/-5000
+Completing...
+200 rules inserted. The rule base contains 123 rules. 18 rules in the queue.
+400 rules inserted. The rule base contains 196 rules. 57 rules in the queue.
+600 rules inserted. The rule base contains 241 rules. 92 rules in the queue.
+800 rules inserted. The rule base contains 270 rules. 113 rules in the queue.
+1000 rules inserted. The rule base contains 307 rules. 85 rules in the queue.
+1200 rules inserted. The rule base contains 355 rules. 79 rules in the queue.
+1400 rules inserted. The rule base contains 364 rules. 32 rules in the queue.
+Starting query event(authSuccess(sk_84,mac_85)) ==> event(macChecked(sk_84,mac_85))
+RESULT event(authSuccess(sk_84,mac_85)) ==> event(macChecked(sk_84,mac_85)) is true.
+-- Query not attacker(keyid[])
+nounif attacker(cells(*senderC_107006,*senderE_107007,*receiverC_107008,*receiverE_107009),v_107010)/-5000
+Completing...
+200 rules inserted. The rule base contains 123 rules. 18 rules in the queue.
+400 rules inserted. The rule base contains 196 rules. 57 rules in the queue.
+600 rules inserted. The rule base contains 241 rules. 92 rules in the queue.
+800 rules inserted. The rule base contains 270 rules. 113 rules in the queue.
+1000 rules inserted. The rule base contains 307 rules. 85 rules in the queue.
+1200 rules inserted. The rule base contains 355 rules. 79 rules in the queue.
+1400 rules inserted. The rule base contains 364 rules. 32 rules in the queue.
+Starting query not attacker(cells(senderC_213768,senderE_213769,receiverC_213770,receiverE_213771),keyid[])
+goal reachable: attacker(cells(two[],two[],one[],two[]),keyid[])
