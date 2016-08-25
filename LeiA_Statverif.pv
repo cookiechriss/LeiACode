@@ -132,14 +132,15 @@ let receiver(keyid:key)=
     in(c,(=scid, mac:bitstring));
     let maccheck=MAC(newsk,cid1,msg) in
     if maccheck=mac then
+       (*Authentication is successful*)
        event macChecked(newsk,maccheck);
        0
     else
-    (*Macs did not match, counters must be out of sync. Auth_Fail*)
+    (*Auth_Fail*)
     out(c,true);
-    in(c,(scid1:bitstring,seid:bitstring));
+    in(c,(scid1:bitstring,seid1:bitstring));
     let cid2=isGreatherThan(cid1,scid1) in
-    let eid2=isGreatherThan(eid1,scid1) in
+    let eid2=isGreatherThan(eid1,seid1) in
     
     in (c,(=cid2,verifmac:bitstring));
     
