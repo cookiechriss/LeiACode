@@ -144,7 +144,7 @@ let receiver(keyid:key)=
     
     in (c,(=cid2,verifmac:bitstring));
     
-    let newsk2=sessionKeyGen(keyid,cid2) in
+    let newsk2=sessionKeyGen(keyid,eid2) in
     (*Check macs*)
     let maccheck2=MAC(newsk2,cid2,eid2) in
     (* counters resynced, process can restart*)
