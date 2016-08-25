@@ -89,10 +89,10 @@ let sender(keyid:key)=
     senderC:=zero;
     senderE:=eid1;
 
+    (*Sending authenticated messages*)
     new msg:bitstring;
-    let mac=MAC(newsk,cid1,msg) in
-    (*Send counter/ msg and then mac*)
     out(c,(cid1,msg));
+    let mac=MAC(newsk,cid1,msg) in
     out(c,(cid1,mac));
 
     (*AUTH_FAIL received*)
@@ -128,8 +128,6 @@ let receiver(keyid:key)=
     out(c,keyid); *)
     
     (*Receive counter and msg*)
-
-(*add some code which only updades cid and eid if senders is larger*)
     in(c,(scid:bitstring,msg:bitstring));
     in(c,(=scid, mac:bitstring));
     let maccheck=MAC(newsk,cid1,msg) in
@@ -145,9 +143,9 @@ let receiver(keyid:key)=
     
     in (c,(=cid2,verifmac:bitstring));
     
-    let newsk=sessionKeyGen(keyid,cid2) in
+    let newsk2=sessionKeyGen(keyid,cid2) in
     (*Check macs*)
-    let maccheck2=MAC(sk,cid2,eid2) in
+    let maccheck2=MAC(newsk2,cid2,eid2) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
        (* runs for 10+ mins and generates a segmentation fault
