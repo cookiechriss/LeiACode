@@ -1,0 +1,79 @@
+free c:channel.
+
+type key.
+type epoch.
+type counter.
+type sessionkey.
+
+free keyid:key [private].
+
+query attacker(keyid).
+
+fun sessionKeyGen(key, epoch):sessionkey.
+fun MAC(sessionkey, counter, bitstring): bitstring.
+fun epoch2bitstring(epoch):bitstring [data,typeConverter].
+
+event authSuccess(sessionkey,bitstring).
+event macChecked(sessionkey,bitstring).
+
+
+
+query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
+
+
+let sender(ep:epoch, cnt:counter, keyid:key)=
+    new msg: bitstring;
+    (*Seup sessionkey*)
+    let sk = sessionKeyGen(keyid, ep) in
+    let mac=MAC(sk, cnt,msg) in
+    (*Send counter/ msg and then mac*)
+    out(c,(cnt,msg));
+    out(c,(cnt,mac));
+    in(c,authfail:bool);
+    if authfail = true then
+       (*
+       update counters()
+       *)
+       new newep:epoch;
+       new newcnt:counter;
+       let newsk = sessionKeyGen(keyid,newep) in
+       (*Broadcast Counters to resync them*)
+       out(c,(newcnt,newep));
+       (*Send new mac to verify*)
+       let verifmac=MAC(newsk,newcnt,epoch2bitstring(newep)) in
+       out(c,(newcnt,verifmac));
+       (*Process can be restarted*)
+       0
+    else
+	event authSuccess(sk,mac);  
+	0
+.
+let receiver(ep:epoch, ocnt:counter, keyid:key)=
+    out(c,keyid);
+    let sk=sessionKeyGen(keyid,ep) in
+    (*Receive counter and msg*)
+    in(c,(cnt:counter,msg:bitstring));
+    in(c,(=cnt, mac:bitstring));
+    let maccheck=MAC(sk,cnt,msg) in
+    if maccheck=mac then
+       event macChecked(sk,maccheck);
+       0
+    else
+    (*Macs did not match, counters must be out of sync. Auth_Fail*)
+    out(c,true);
+    in(c,(newcnt:counter,newep:epoch));
+    in (c,(=newcnt,verifmac:bitstring));
+    let newsk=sessionKeyGen(keyid,newep) in
+    (*Check macs*)
+    let maccheck2=MAC(sk,newcnt,epoch2bitstring(newep)) in
+    (* counters resynced, process can restart*)
+    if maccheck2=verifmac then
+        0
+.
+process
+	new ep:epoch;
+	new cnt:counter;
+	(
+		(!sender(ep,cnt,keyid)) | (!receiver(ep,cnt,keyid))
+	)
+	
