@@ -33,6 +33,21 @@ cell senderE:bitstring:=zero.
 
 cell receiverC:bitstring:= zero.
 cell receiverE:bitstring:=zero.
+(*Session key gen 
+	  eid++
+	  gen mac 
+	  reset counter to 0
+update counters
+       if cid=4
+       	  if eid=4
+	     eid=0
+	  else
+	     eid++
+	   cid=0
+	   call keygen
+        else 
+	    cid++
+*)
 
 letfun plusplus(x:bitstring)=
        if x=zero then one
@@ -126,8 +141,6 @@ let receiver(keyid:key)=
     in(c,(scid1:bitstring,seid1:bitstring));
     let cid2=isGreatherThan(cid1,scid1) in
     let eid2=isGreatherThan(eid1,seid1) in
-    receiverC:=cid2;
-    receiverE:=eid2;
     
     in (c,(=cid2,verifmac:bitstring));
     
@@ -136,8 +149,6 @@ let receiver(keyid:key)=
     let maccheck2=MAC(newsk2,cid2,eid2) in
     (* counters resynced, process can restart*)
     if maccheck2=verifmac then
-
-    (*might need to verify the message again??*)
        (* runs for 10+ mins and generates a segmentation fault
 
        out(c,keyid);*)
