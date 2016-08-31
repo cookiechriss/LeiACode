@@ -1,6 +1,0 @@
-1) if i do read s as eid where s points to one 
-if i change the value of s, does eid also update? if not, whats the pest way of redefining it without warnings as I cant check it directly?
-
-2) ABOUT PAPER
-	I dont think the cid <-0x0000 is required in update_counters() as it just sets cid=0 and then calls the sessionkeygen function which again sets it to 0. Its not used within that function so you may aswell just remove it?
-
