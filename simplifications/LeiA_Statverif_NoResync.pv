@@ -1,5 +1,5 @@
-set verboseClauses=short.
-set debugOutput=false.
+
+set debugOutput=true.
 free c:channel.
 
 type key.
@@ -83,18 +83,8 @@ new msg:bitstring;
     (*AUTH_FAIL received*)
     in(c,authfail:bool);
     if authfail = true then
-       (*update counters()*)
-       let (cid2:bitstring,eid2:bitstring,newsk2:sessionkey) = update_counters(cid1,eid1, newsk) in
-       senderC:=cid2;
-       senderE:=eid2;
        unlock senderC;
-       unlock senderE;
-       (*Broadcast Counters to resync them*)
-       out(c,(cid2,eid2));
-       (*Send new mac to verify*)
-       let verifmac=MAC(newsk2,cid2,eid2) in
-       out(c,(cid2,verifmac))
-       (*Process can be restarted*)
+       unlock senderE
     else
 	unlock senderC;
         unlock senderE;
@@ -128,28 +118,7 @@ let receiver(keyid:key)=
        0
     else
     (*Auth_Fail*)
-    out(c,true);
-    in(c,(scid1:bitstring,seid1:bitstring));
-    let cid2=isGreatherThan(cid1,scid1) in
-    let eid2=isGreatherThan(eid1,seid1) in
-    receiverC:=cid2;
-    receiverE:=eid2;
-    unlock receiverC;
-    unlock receiverE;
-
-    in (c,(=cid2,verifmac:bitstring));
-
-    let newsk2=sessionKeyGen(keyid,eid2) in
-    (*Check macs*)
-    let maccheck2=MAC(newsk2,cid2,eid2) in
-    (* counters resynced, process can restart*)
-    if maccheck2=verifmac then
-
-    (*might need to verify the message again??*)
-       (* runs for 10+ mins and generates a segmentation fault
-
-       out(c,keyid);*)
-        0
+    out(c,true)
 .
 process
 	(
