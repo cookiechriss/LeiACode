@@ -1,0 +1,112 @@
+free c:channel.
+
+type key.
+type sessionkey.
+
+free keyid:key [private].
+free zero:bitstring.
+free one:bitstring.
+free two:bitstring.
+free authfail:bitstring [private].
+fun sessionKeyGen(key, bitstring):sessionkey.
+fun MAC(sessionkey, bitstring, bitstring): bitstring.
+
+cell senC:bitstring.
+cell recC:bitstring.
+cell senE:bitstring.
+cell recE:bitstring.
+cell senSK:sessionkey.
+cell recSK:sessionkey.
+
+letfun pp(x:bitstring)=
+       if x=zero then one
+       else if x=one then two
+       else if x=two then zero
+.
+letfun session_key_gen(eid:bitstring)=
+       let eidpp:bitstring = pp(eid) in
+       let sk = sessionKeyGen(keyid, eidpp) in
+       (eidpp,sk)
+.
+letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
+       if cid=two then (
+       	  (*plusplus handles the overflow
+       	  if eid = two then
+       	     newE=zero
+       	  else  let eidpp:bitstring = plusplus(eid) in senderE:=eidpp2;*)
+       	  let (eidpp:bitstring, newsk:sessionkey) = session_key_gen(eid) in
+	  (zero,eidpp, newsk)
+	)
+    	else let cidpp = pp(cid) in (cidpp,eid,sk)
+.
+
+query attacker(keyid).
+let s()=
+    read senC as cid;
+    read senE as eid;
+    read senSK as sk;
+    let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
+    
+    lock senC;
+    senC:=cid1;
+    unlock senC;
+
+    lock senE;
+    senC:=eid1;
+    unlock senE;
+
+    lock senSK;
+    senSK:=newsk;
+    unlock senSK;
+    
+    new msg:bitstring;
+    out(c,(cid1, msg));
+    out(c,(cid1,MAC(newsk,cid1,msg)));
+    in(c,reply:bitstring);
+    if reply=authfail then
+       0
+.
+
+let r()=
+    read recC as cid;
+    read recE as eid;
+    read recSK as sk;
+    let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
+
+    lock recC;
+    recC:=cid1;
+    unlock recC;
+    
+    lock recE;
+    recC:=eid1;
+    unlock recE;
+
+
+    lock recSK;
+    recSK:=newsk;
+    unlock recSK;
+
+    in(c,(scid:bitstring,msg:bitstring));
+    in(c,(=scid,mac:bitstring));
+(*    if scid<>cid1 then*)
+    let maccheck=MAC(newsk, cid1,msg) in
+    if mac=maccheck then
+       out(c,keyid);
+       0
+    else
+	
+	(*out(c, authfail)*)
+	0
+.
+ 
+process
+
+	senC:=zero;
+	recC:=zero;
+	senE:=one;
+	recE:=one;
+	senSK:=sessionKeyGen(keyid, one);
+	recSK:=sessionKeyGen(keyid, one);
+	(
+		(!s)|(!r)
+	)
