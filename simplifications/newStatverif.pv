@@ -49,8 +49,9 @@ letfun isGreatherThan(x:bitstring, y:bitstring)=
        else if x=one  && (y=two) then y
        else x
 .
-query attacker(keyid).
+
 let s()=
+
     read senC as cid;
     read senE as eid;
     read senSK as sk;
@@ -68,7 +69,6 @@ let s()=
     senSK:=newsk;
     unlock senSK;
     
-    new msg:bitstring;
     out(c,(cid1, msg));
     out(c,(cid1,MAC(newsk,cid1,msg)));
     in(c,reply:bitstring);
@@ -126,7 +126,7 @@ let r()=
     let maccheck=MAC(newsk, cid1,msg) in
     if mac=maccheck then
        (*event macChecked(newsk,maccheck);*)
-       out(c,keyid);
+       
        0
     else
 	out(c, authfail);
@@ -155,7 +155,7 @@ let r()=
 	    in(c, (=scid1, mac3:bitstring));
 	    let finalmac = MAC(newsk2,cid2, msg2) in
 	    	if finalmac=mac3 then
-		   out(c,keyid) (*verified*)
+		   0(*verified*)
 		else
 				0
 	    else
