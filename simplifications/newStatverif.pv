@@ -1,3 +1,4 @@
+set verboseRules=true.
 free c:channel.
 
 type key.
@@ -18,6 +19,10 @@ cell recE:bitstring.
 cell senSK:sessionkey.
 cell recSK:sessionkey.
 
+
+event authSuccess(sessionkey,bitstring).
+event macChecked(sessionkey,bitstring).
+query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
 letfun pp(x:bitstring)=
        if x=zero then one
        else if x=one then two
@@ -39,7 +44,11 @@ letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
 	)
     	else let cidpp = pp(cid) in (cidpp,eid,sk)
 .
-
+letfun isGreatherThan(x:bitstring, y:bitstring)=
+       if x = zero then y
+       else if x=one  && (y=two) then y
+       else x
+.
 query attacker(keyid).
 let s()=
     read senC as cid;
@@ -64,7 +73,32 @@ let s()=
     out(c,(cid1,MAC(newsk,cid1,msg)));
     in(c,reply:bitstring);
     if reply=authfail then
+       let (cid2:bitstring, eid2:bitstring, newsk2:sessionkey) = update_counters(cid1, eid1, newsk) in
+
+       lock senC;
+       senC:=cid2;
+       unlock senC;
+
+       lock senE;
+       senC:=eid2;
+       unlock senE;
+
+       lock senSK;
+       senSK:=newsk2;
+       unlock senSK;
+
+       out(c,(cid2,eid2));
+       out(c,(cid2,MAC(newsk2,cid2,eid2)));
+
+
+       out(c,(cid2,msg));
+       out(c,(cid2,MAC(newsk2,cid2,msg)));
+       
+       
        0
+    else
+	(*event authSuccess(newsk,MAC(newsk,cid1,msg))*)
+	0
 .
 
 let r()=
@@ -91,12 +125,42 @@ let r()=
 (*    if scid<>cid1 then*)
     let maccheck=MAC(newsk, cid1,msg) in
     if mac=maccheck then
+       (*event macChecked(newsk,maccheck);*)
        out(c,keyid);
        0
     else
+	out(c, authfail);
+	in(c,(scid1:bitstring,seid1:bitstring));
+	in(c,(=scid1,mac2:bitstring));
 	
-	(*out(c, authfail)*)
-	0
+	let cid2=isGreatherThan(cid1,scid1) in
+    	let eid2=isGreatherThan(eid1,seid1) in
+	let newsk2=sessionKeyGen(keyid, eid2) in
+	let verifmac=MAC(newsk2,scid1, seid1) in
+	if verifmac=mac2 then 
+	    lock recC;
+    	    recC:=cid2;
+    	    unlock recC;
+
+	    lock recE;
+	    recC:=eid2;
+	    unlock recE;
+
+
+	    lock recSK;
+	    recSK:=newsk2;
+	    unlock recSK;
+
+	    in(c, (=scid1, msg2:bitstring));
+	    in(c, (=scid1, mac3:bitstring));
+	    let finalmac = MAC(newsk2,cid2, msg2) in
+	    	if finalmac=mac3 then
+		   out(c,keyid) (*verified*)
+		else
+				0
+	    else
+		0
+	
 .
  
 process
