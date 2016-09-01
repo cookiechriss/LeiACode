@@ -1,4 +1,4 @@
-set verboseRules=true.
+set debugOutput=true.
 free c:channel.
 
 type key.
@@ -19,10 +19,11 @@ cell recE:bitstring.
 cell senSK:sessionkey.
 cell recSK:sessionkey.
 
-
+query attacker(keyid).
+(*
 event authSuccess(sessionkey,bitstring).
 event macChecked(sessionkey,bitstring).
-query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
+query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).*)
 letfun pp(x:bitstring)=
        if x=zero then one
        else if x=one then two
@@ -51,23 +52,15 @@ letfun isGreatherThan(x:bitstring, y:bitstring)=
 .
 
 let s()=
-
+    new msg:bitstring;
     read senC as cid;
     read senE as eid;
     read senSK as sk;
     let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
     
-    lock senC;
     senC:=cid1;
-    unlock senC;
-
-    lock senE;
     senC:=eid1;
-    unlock senE;
-
-    lock senSK;
     senSK:=newsk;
-    unlock senSK;
     
     out(c,(cid1, msg));
     out(c,(cid1,MAC(newsk,cid1,msg)));
@@ -75,17 +68,9 @@ let s()=
     if reply=authfail then
        let (cid2:bitstring, eid2:bitstring, newsk2:sessionkey) = update_counters(cid1, eid1, newsk) in
 
-       lock senC;
        senC:=cid2;
-       unlock senC;
-
-       lock senE;
        senC:=eid2;
-       unlock senE;
-
-       lock senSK;
        senSK:=newsk2;
-       unlock senSK;
 
        out(c,(cid2,eid2));
        out(c,(cid2,MAC(newsk2,cid2,eid2)));
@@ -107,18 +92,9 @@ let r()=
     read recSK as sk;
     let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
 
-    lock recC;
     recC:=cid1;
-    unlock recC;
-    
-    lock recE;
     recC:=eid1;
-    unlock recE;
-
-
-    lock recSK;
     recSK:=newsk;
-    unlock recSK;
 
     in(c,(scid:bitstring,msg:bitstring));
     in(c,(=scid,mac:bitstring));
@@ -138,18 +114,9 @@ let r()=
 	let newsk2=sessionKeyGen(keyid, eid2) in
 	let verifmac=MAC(newsk2,scid1, seid1) in
 	if verifmac=mac2 then 
-	    lock recC;
     	    recC:=cid2;
-    	    unlock recC;
-
-	    lock recE;
 	    recC:=eid2;
-	    unlock recE;
-
-
-	    lock recSK;
 	    recSK:=newsk2;
-	    unlock recSK;
 
 	    in(c, (=scid1, msg2:bitstring));
 	    in(c, (=scid1, mac3:bitstring));
