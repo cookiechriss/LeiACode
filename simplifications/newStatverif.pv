@@ -8,7 +8,7 @@ free keyid:key [private].
 free zero:bitstring.
 free one:bitstring.
 free two:bitstring.
-free authfail:bitstring [private].
+free authfail:bitstring. (* Use to be private but isnt now*)
 fun sessionKeyGen(key, bitstring):sessionkey.
 fun MAC(sessionkey, bitstring, bitstring): bitstring.
 
@@ -57,11 +57,11 @@ let s()=
     read senE as eid;
     read senSK as sk;
     let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
-    
+
     senC:=cid1;
     senC:=eid1;
     senSK:=newsk;
-    
+
     out(c,(cid1, msg));
     out(c,(cid1,MAC(newsk,cid1,msg)));
     in(c,reply:bitstring);
@@ -78,8 +78,8 @@ let s()=
 
        out(c,(cid2,msg));
        out(c,(cid2,MAC(newsk2,cid2,msg)));
-       
-       
+
+
        0
     else
 	(*event authSuccess(newsk,MAC(newsk,cid1,msg))*)
@@ -102,18 +102,18 @@ let r()=
     let maccheck=MAC(newsk, cid1,msg) in
     if mac=maccheck then
        (*event macChecked(newsk,maccheck);*)
-       
+
        0
     else
 	out(c, authfail);
 	in(c,(scid1:bitstring,seid1:bitstring));
 	in(c,(=scid1,mac2:bitstring));
-	
+
 	let cid2=isGreatherThan(cid1,scid1) in
     	let eid2=isGreatherThan(eid1,seid1) in
 	let newsk2=sessionKeyGen(keyid, eid2) in
 	let verifmac=MAC(newsk2,scid1, seid1) in
-	if verifmac=mac2 then 
+	if verifmac=mac2 then
     	    recC:=cid2;
 	    recC:=eid2;
 	    recSK:=newsk2;
@@ -127,9 +127,9 @@ let r()=
 				0
 	    else
 		0
-	
+
 .
- 
+
 process
 
 	senC:=zero;
@@ -139,5 +139,5 @@ process
 	senSK:=sessionKeyGen(keyid, one);
 	recSK:=sessionKeyGen(keyid, one);
 	(
-		(!s)|(!r)
+		(s)|(r)
 	)
