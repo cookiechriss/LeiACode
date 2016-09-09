@@ -20,10 +20,11 @@ cell senSK:sessionkey.
 cell recSK:sessionkey.
 
 query attacker(keyid).
-(*
+
 event authSuccess(sessionkey,bitstring).
 event macChecked(sessionkey,bitstring).
-query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).*)
+query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
+
 letfun pp(x:bitstring)=
        if x=zero then one
        else if x=one then two
@@ -87,7 +88,7 @@ let s()=
 
        0
     else
-	(*event authSuccess(newsk,MAC(newsk,cid1,msg))*)
+	event authSuccess(newsk,MAC(newsk,cid1,msg));
 	0
 .
 
@@ -106,7 +107,7 @@ let r()=
 (*    if scid<>cid1 then*)
     let maccheck=MAC(newsk, cid1,msg) in
     if mac=maccheck then
-       (*event macChecked(newsk,maccheck);*)
+       event macChecked(newsk,maccheck);
 
        0
     else
