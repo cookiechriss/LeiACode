@@ -84,8 +84,6 @@ let s()=
        
        out(c,(cid3,msg));
        out(c,(cid3,MAC(newsk3,cid3,msg)));
-
-
        0
     else
 	event authSuccess(newsk,MAC(newsk,cid1,msg));
@@ -139,8 +137,6 @@ let r()=
 	   (*continue data transmission as normal.*)
     	   let (cid3:bitstring, eid3:bitstring, newsk3:sessionkey) = update_counters(cid2, eid2, newsk2) in
 
-
-
 	    recC:=cid3;
 	    recE:=eid3;
 	    recSK:=newsk3;
@@ -166,5 +162,5 @@ process
 	senSK:=sessionKeyGen(keyid, one);
 	recSK:=sessionKeyGen(keyid, one);
 	(
-		(s)|(r)
+		(!s)|(!r)
 	)
