@@ -47,8 +47,8 @@ letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
     	else let cidpp = pp(cid) in (cidpp,eid,sk)
 .
 letfun isGreatherThan(x:bitstring, y:bitstring)=
-       if x = zero then true
-       else if x=one  && (y=two) then true
+       if x = zero && y <> zero then true
+       else if x=one  && y=two then true
        else false
 .
 
