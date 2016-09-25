@@ -43,7 +43,7 @@ query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecke
 (*
 A Function to increment one of the public variables. Also handles the overflow
 should it be required.
-* )
+*)
 letfun pp(x:bitstring)=
        if x=zero then one
        else if x=one then two
