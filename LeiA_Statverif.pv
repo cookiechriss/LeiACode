@@ -174,17 +174,17 @@ let r()=
     else
     (* Authentication has failed. Send AUTH_FAIL *)
 	out(c, authfail);
-  (*
-  Receive the senders counter and epoch followed by another message containing
-  the senders counter again and the MAC built from the session key, counter and
-  epoch.
-  *)
+	(*
+	Receive the senders counter and epoch followed by another message containing
+	the senders counter again and the MAC built from the session key, counter and
+	epoch.
+	*)
 	in(c,(scid1:bitstring,seid1:bitstring));
 	in(c,(=scid1,mac2:bitstring));
-  (*
-  Check if the senders counter is greater than its own and the same for the epoch
-  and if they are, update its own counters with these temporarily.
-  *)
+	(*
+	Check if the senders counter is greater than its own and the same for the epoch
+	and if they are, update its own counters with these temporarily.
+	*)
 	let cidgt=isGreatherThan(cid1,scid1) in
     	let eidgt=isGreatherThan(eid1,seid1) in
 
@@ -192,33 +192,33 @@ let r()=
 	let cid2=scid1 in
 	let eid2=seid1 in
 
-  (* Generate new session key new epoch to try and verify the mac it received *)
+  	(* Generate new session key new epoch to try and verify the mac it received *)
 	let newsk2=sessionKeyGen(keyid, eid2) in
 	let verifmac=MAC(newsk2,cid2, eid2) in
-  (*
-  Check if the mac it received matches the one it has created using the senders
-  counter and epoch.
-  *)
+	(*
+	Check if the mac it received matches the one it has created using the senders
+	counter and epoch.
+	*)
 	if verifmac=mac2 then
 	   (*Continue data transmission as normal, update current counters.*)
     	   let (cid3:bitstring, eid3:bitstring, newsk3:sessionkey) = update_counters(cid2, eid2, newsk2) in
-      (* Save counters, epoch and session key to cells *)
+      	   (* Save counters, epoch and session key to cells *)
 	    recC:=cid3;
 	    recE:=eid3;
 	    recSK:=newsk3;
 
-      (*
-      Receive the senders counter and message again followed by another containing
-      the counter again and the MAC built from the session key, counter and message.
-      *)
+	    (*
+	    Receive the senders counter and message again followed by another containing
+	    the counter again and the MAC built from the session key, counter and message.
+	    *)
 	    in(c, (scid2:bitstring, msg2:bitstring));
 	    in(c, (=scid2, mac3:bitstring));
 	    let finalmac = MAC(newsk3,cid3, msg2) in
-        (* Check if the MAC generated matches the one received *)
+            	(* Check if the MAC generated matches the one received *)
 	    	if finalmac=mac3 then
 		   0(* Sender Authenticated *)
 		else
-        (* Authentication Failed. *)
+        	(* Authentication Failed. *)
 				0
 	    else
     (* Authentication Failed *)
@@ -226,12 +226,12 @@ let r()=
 .
 (* Instructions to test protocol *)
 process
-  (*Initialise the cells to Zero/One *)
+	 (*Initialise the cells to Zero/One *)
 	senC:=zero;
 	recC:=zero;
 	senE:=one;
 	recE:=one;
-  (*Set starting session key *)
+	(*Set starting session key *)
 	senSK:=sessionKeyGen(keyid, one);
 	recSK:=sessionKeyGen(keyid, one);
 	(
