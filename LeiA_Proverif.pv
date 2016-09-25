@@ -1,33 +1,62 @@
 
 free c:channel.
-
+(* Define the Long Term Symmetric Key and Session Key. *)
 type key.
 type sessionkey.
-
+(*Shared long term key*)
 free keyid:key [private].
+(* Public constants used for values of counters *)
 free zero:bitstring.
 free one:bitstring.
 free two:bitstring.
-free authfail:bitstring. (* Use to be private but isnt now*)
+free authfail:bitstring.
+
+(*
+Function that takes a symmetric key and a bitstring to output a session key
+*)
 fun sessionKeyGen(key, bitstring):sessionkey.
+(*
+Function to create a Message Authentication Code using a session key and two
+bitstrings. The MAC is a bitstring.
+*)
 fun MAC(sessionkey, bitstring, bitstring): bitstring.
 
+(* Sanity check to make sure the shared key is not leaked to the attacker *)
 query attacker(keyid).
 
 event authSuccess(sessionkey,bitstring).
 event macChecked(sessionkey,bitstring).
 query sk:sessionkey, mac:bitstring; event(authSuccess(sk,mac))==>event(macChecked(sk,mac)).
 
+(*
+A Function to increment one of the public variables. Also handles the overflow
+should it be required.
+*)
 letfun pp(x:bitstring)=
        if x=zero then one
        else if x=one then two
        else if x=two then zero
 .
+(*
+A function to generate a session key given an epoch. It increases the epoch by 1
+and then uses the sessionKeyGen using the shared key and the new epoch. This then
+returns the new epoch and the session key.
+*)
 letfun session_key_gen(eid:bitstring)=
        let eidpp:bitstring = pp(eid) in
        let sk = sessionKeyGen(keyid, eidpp) in
        (eidpp,sk)
 .
+(*
+A Function to update the current counter and epoch. Also takes the current session
+key so it can return this or a new one at the end of the function.
+Checks if the counter is two. If so, adding one would cause it to over flow so
+it instead creates a new session key (which increases the epoch) and returns zero
+as the new counter, the new epoch from the session_key_gen function and the new
+session key.
+If the counter is not two then it instead increases it by 1 and then returns the
+new counter, the current epoch and session key.
+*)
 letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
        if cid=two then (
        	  let (eidpp:bitstring, newsk:sessionkey) = session_key_gen(eid) in
@@ -35,51 +64,98 @@ letfun update_counters(cid:bitstring,eid:bitstring, sk:sessionkey)=
 	)
     	else let cidpp = pp(cid) in (cidpp,eid,sk)
 .
+(*
+A Function to check if one bitstring is larger than another
+*)
 letfun isGreatherThan(x:bitstring, y:bitstring)=
        if x = zero && y <> zero then true
        else if x=one  && y=two then true
        else false
 .
-
+(* 
+The Sender Process which takes the counter, epoch and session
+key so they start off with the same value.
+*)
 let s(cid:bitstring, eid:bitstring, sk:sessionkey)=
+    (* The message it will send to the Receiver later on *)
     new msg:bitstring;
+    (*Call the update counters function *)
     let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
 
+    (*
+    Send current counter and the message. Following this, send counter and MAC
+    made up from Session key, the counter and the message.
+    *)
     out(c,(cid1, msg));
     out(c,(cid1,MAC(newsk,cid1,msg)));
+    (* May receive an AUTH_FAIL *)
     in(c,reply:bitstring);
     if reply=authfail then
+      (* Receiver couldnt authenticate this sender, update current counters. *)
        let (cid2:bitstring, eid2:bitstring, newsk2:sessionkey) = update_counters(cid1, eid1, newsk) in
-
+       (*
+       Send the current counter and epoch to resync with Receiver. Then send the
+       Counter again followed by a MAC built from the Session key, counter and epoch.
+       *)
        out(c,(cid2,eid2));
        out(c,(cid2,MAC(newsk2,cid2,eid2)));
 
+       (* Update current counters again. *)
        let (cid3:bitstring, eid3:bitstring, newsk3:sessionkey) = update_counters(cid2, eid2, newsk2) in
-      
+       (*
+       Send out the new counter and message again so the receiver can reauthenticate
+       the message using their new session key.
+       *)
        out(c,(cid3,msg));
        out(c,(cid3,MAC(newsk3,cid3,msg)));
        0
     else
+	(* No AUTH_FAIL message was sent to trigger event to say authentication was successful *)
 	event authSuccess(newsk,MAC(newsk,cid1,msg));
 	0
 .
-
+(* 
+The Receiver which takes the counter, epoch and session
+key so they start off with the same value.
+*)
 let r(cid:bitstring, eid:bitstring, sk:sessionkey)=
+    (* Update current counters *)
     let (cid1:bitstring, eid1:bitstring, newsk:sessionkey) = update_counters(cid, eid, sk) in
 
-
+    (*
+    Receive the senders counter and a message followed by the senders counter again
+    and the MAC from the sessin key, counter and message.
+    *)
     in(c,(scid:bitstring,msg:bitstring));
     in(c,(=scid,mac:bitstring));
+    (*
+    Check the MAC received from the sender and make sure it matches the one we
+    generate.
+    *)
     let maccheck=MAC(newsk, cid1,msg) in
+    (*
+    If the MAC matches the one we generated then the sender has been successfully
+    authenticated. We can trigger the event to confirm this.
+    *)
     if mac=maccheck then
+       (* Authentication successful *)
        event macChecked(newsk,maccheck);
 
        0
     else
+    (* Authentication has failed. Send AUTH_FAIL *)
 	out(c, authfail);
+	(*
+	Receive the senders counter and epoch followed by another message containing
+	the senders counter again and the MAC built from the session key, counter and
+	epoch.
+	*)
 	in(c,(scid1:bitstring,seid1:bitstring));
 	in(c,(=scid1,mac2:bitstring));
-	
+	(*
+	Check if the senders counter is greater than its own and the same for the epoch
+	and if they are, update its own counters with these temporarily.
+	*)
 	let cidgt=isGreatherThan(cid1,scid1) in
     	let eidgt=isGreatherThan(eid1,seid1) in
 
@@ -87,20 +163,28 @@ let r(cid:bitstring, eid:bitstring, sk:sessionkey)=
 	let cid2=scid1 in
 	let eid2=seid1 in
 
-
+	(* Generate new session key new epoch to try and verify the mac it received *)
 	let newsk2=sessionKeyGen(keyid, eid2) in
 	let verifmac=MAC(newsk2,cid2, eid2) in
+	(*
+	Check if the mac it received matches the one it has created using the senders
+	counter and epoch.
+	*)
 	if verifmac=mac2 then
-	   (*continue data transmission as normal.*)
+	   (*Continue data transmission as normal, update current counters.*)
     	   let (cid3:bitstring, eid3:bitstring, newsk3:sessionkey) = update_counters(cid2, eid2, newsk2) in
-
-
+	    (*
+	    Receive the senders counter and message again followed by another containing
+	    the counter again and the MAC built from the session key, counter and message.
+	    *)
 	    in(c, (scid2:bitstring, msg2:bitstring));
 	    in(c, (=scid2, mac3:bitstring));
 	    let finalmac = MAC(newsk3,cid3, msg2) in
+            	(* Check if the MAC generated matches the one received *)
 	    	if finalmac=mac3 then
-		   0(*verified*)
+		   0(* Sender Authenticated *)
 		else
+        	(* Authentication Failed. *)
 				0
 	    else
 		0
